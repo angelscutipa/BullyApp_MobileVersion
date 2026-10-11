@@ -67,11 +67,10 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NFCReaderUsageDescription</key>
-	<string>Necesitamos acceso al NFC para leer las tarjetas.</string>
-	<key>com.apple.developer.nfc.readersession.formats</key>
+	<string>Necesitamos acceso al NFC para leer las tarjetas y microchips.</string>
+	<key>com.apple.developer.nfc.readersession.iso15693.tag-identifiers</key>
 	<array>
-		<string>NDEF</string>
-		<string>TAG</string>
+		<string>0000000000000000</string>
 	</array>
 </dict>
 </plist>
