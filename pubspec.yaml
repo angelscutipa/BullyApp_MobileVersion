@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.12.1
@@ -40,6 +40,15 @@ dependencies:
   nfc_manager_ndef: ^1.1.0
   url_launcher: ^6.3.2
   dio: ^5.10.0
+  webview_flutter_android: ^4.14.0
+  flutter_secure_storage: ^11.0.0
+  shared_preferences: ^2.5.5
+  get_it: ^9.2.1
+  flutter_bloc: ^9.1.1
+  convert: ^3.1.2
+  flutter_inappwebview: ^6.1.5
+  flutter_inappwebview_android: ^1.1.3
+  permission_handler: ^13.0.2
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +76,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/img/fondo_abstracto.jpg
+    - assets/img/ref_escaneo.png
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

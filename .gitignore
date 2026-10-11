@@ -12,34 +12,68 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# Compressed / Backup files
+*.zip
+*.rar
+*.7z
+*.tar.gz
+
+# Keys, Keystores & Sensitive files
+*.jks
+*.keystore
+key.properties
+*.p12
+*.cer
+*.pem
+*.mobileprovision
+
+# Agent / Tooling Artifacts
+.artifacts/
+.gradletasknamecache
+
+# IntelliJ / Android Studio related
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
+# VS Code
 #.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
 
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
+# Android build artifacts
+/android/build/
+/android/.gradle/
+/android/app/build/
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# iOS build artifacts & Pods
+/ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/ephemeral/
+/ios/Flutter/App.framework
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Flutter.podspec
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/app.flx
+/ios/Flutter/app.zip
+/ios/Flutter/flutter_assets/
+/ios/Flutter/flutter_export_environment.sh
+/ios/Runner/GeneratedPluginRegistrant.*
+/ios/DerivedData/
+
+# Symbolication & Obfuscation
+app.*.symbols
+app.*.map.json

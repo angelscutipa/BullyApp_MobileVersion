@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'package:bully_app/core/global_variables.dart';
+import 'package:bully_app/features/auth/data/datasources/login_remote_data_source.dart';
+import 'package:bully_app/features/auth/data/models/login_response_model.dart';
 
 class SideMenu extends StatefulWidget {
-  final WebViewController controller;
+  final InAppWebViewController? controller;
   final String btnTextLogin;
-  const SideMenu({super.key, required this.controller, required this.btnTextLogin});
+
+  const SideMenu({
+    super.key,
+    required this.controller,
+    required this.btnTextLogin,
+  });
 
   @override
   State<SideMenu> createState() => _SideMenuState();
@@ -16,9 +23,10 @@ class _SideMenuState extends State<SideMenu> {
   bool _isComunidadExpanded = false;
 
   void _navigateTo(String url) {
-    widget.controller.loadRequest(Uri.parse(url));
+    widget.controller?.loadUrl(
+      urlRequest: URLRequest(url: WebUri(url)),
+    );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -37,235 +45,198 @@ class _SideMenuState extends State<SideMenu> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                const Text(
-                  'Mas opciones',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    child: const Icon(
-                      Icons.close,
+                  const Text(
+                    'Mas opciones',
+                    style: TextStyle(
                       color: Colors.white,
-                      size: 24,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                // Botón Iniciar Sesión
-                GestureDetector(
-                  onTap: () {
-                    showGlobalAppBar = true;
-                    _navigateTo('https://bullyapp.com.pe/login');
-                    Navigator.of(context).pop();
-                    // Ejecuta la función que necesites al hacer click
-                    // Reemplaza por la lógica real: navegar, abrir modal, etc.
-                    debugPrint('Iniciar Sesión pulsado');
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F1419),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: const Color(0xFF2A2A2A),
-                        width: 1,
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 24,
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.login,
-                          color: Colors.white,
-                          size: 20,
+                  ),
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  // Botón Iniciar Sesión
+                  GestureDetector(
+                    onTap: () async {
+                      showGlobalAppBar = true;
+                      /*final loginRemoteDataSource = AuthRemoteDataSource();
+                      final loginModel = await loginRemoteDataSource.login(
+                        email: 'angels.cutipasamayani@gmail.com',
+                        password: 'mFb43TADKUVuyCu@',
+                      );*/
+                      _navigateTo('https://bullyapp.com.pe/login');
+                      Navigator.of(context).pop();
+                      debugPrint('Iniciar Sesión pulsado');
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F1419),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFF2A2A2A),
+                          width: 1,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          widget.btnTextLogin,
-                          style: TextStyle(
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.login,
                             color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            size: 20,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            widget.btnTextLogin,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                
-                const SizedBox(height: 12),
-                
-                // // Botón Descargar App
-                // Container(
-                //   width: double.infinity,
-                //   padding: const EdgeInsets.symmetric(vertical: 14),
-                //   decoration: BoxDecoration(
-                //     color: const Color(0xFFFFD700),
-                //     borderRadius: BorderRadius.circular(8),
-                //   ),
-                //   child: Row(
-                //     mainAxisAlignment: MainAxisAlignment.center,
-                //     children: [
-                //       const Icon(
-                //         Icons.download,
-                //         color: Colors.black,
-                //         size: 22,
-                //       ),
-                //       const SizedBox(width: 8),
-                //       const Text(
-                //         'Descargar App',
-                //         style: TextStyle(
-                //           color: Colors.black,
-                //           fontSize: 16,
-                //           fontWeight: FontWeight.bold,
-                //         ),
-                //       ),
-                //     ],
-                //   ),
-                // ),
-                
-                const SizedBox(height: 24),
-                
-                // NFC
-                _buildMenuItem(
-                  icon: Icons.nfc,
-                  title: 'NFC',
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    // Tu lógica aquí
-                  },
-                ),
-                
-                // Dogs
-                _buildMenuItem(
-                  icon: Icons.pets,
-                  title: 'Dogs',
-                  onTap: () {
-                    showGlobalAppBar = false;
-                    _navigateTo('https://bullyapp.com.pe/bullys');
-                    Navigator.of(context).pop();
-                    // Tu lógica aquí
-                  },
-                ),
-                
-                // Torneos
-                _buildMenuItem(
-                  icon: Icons.emoji_events,
-                  title: 'Torneos',
-                  onTap: () {
-                    showGlobalAppBar = false;
-                    _navigateTo('https://bullyapp.com.pe/events');
-                    Navigator.of(context).pop();
-                    // Tu lógica aquí
-                  },
-                ),
-                
-                // Ruta Bulls
-                _buildMenuItem(
-                  icon: Icons.route,
-                  title: 'Ruta Bulls',
-                  onTap: () {
-                    showGlobalAppBar = false;
-                    _navigateTo('https://bullyapp.com.pe/blog');
-                    Navigator.of(context).pop();
-                    // Tu lógica aquí
-                  },
-                ),
-                
-                // IDRB
-                _buildMenuItem(
-                  icon: Icons.shield_outlined,
-                  title: 'IDRB',
-                  onTap: () {
-                    showGlobalAppBar = false;
-                    _navigateTo('https://bullyapp.com.pe/idrb');
-                    Navigator.of(context).pop();
-                    // Tu lógica aquí
-                  },
-                ),
-                
-                // Tienda
-                _buildMenuItem(
-                  icon: Icons.store_outlined,
-                  title: 'Tienda',
-                  onTap: () {
-                    showGlobalAppBar = false;
-                    _navigateTo('https://bullyapp.com.pe/marketplace');
-                    Navigator.of(context).pop();
-                    // Tu lógica aquí
-                  },
-                ),
-                
-                // Comunidad (con submenú)
-                _buildExpandableMenuItem(
-                  icon: Icons.people_outline,
-                  title: 'Comunidad',
-                  isExpanded: _isComunidadExpanded,
-                  onToggle: () {
-                    setState(() {
-                      _isComunidadExpanded = !_isComunidadExpanded;
-                    });
-                  },
-                  children: [
-                    _buildSubMenuItem(
-                      icon: Icons.person_outline,
-                      title: 'Propietario',
-                      onTap: () {
-                        _navigateTo('https://bullyapp.com.pe/owners');
-                        Navigator.of(context).pop();
-                        // Tu lógica aquí
-                      },
-                    ),
-                    _buildSubMenuItem(
-                      icon: Icons.groups,
-                      title: 'Teams',
-                      onTap: () {
-                        _navigateTo('https://bullyapp.com.pe/teams');
-                        Navigator.of(context).pop();
-                        // Tu lógica aquí
-                      },
-                    ),
-                    _buildSubMenuItem(
-                      icon: Icons.home_outlined,
-                      title: 'Criaderos',
-                      onTap: () {
-                        _navigateTo('https://bullyapp.com.pe/kennels');
-                        Navigator.of(context).pop();
-                        // Tu lógica aquí
-                      },
-                    ),
-                    _buildSubMenuItem(
-                      icon: Icons.business_outlined,
-                      title: 'Negocios',
-                      onTap: () {
-                        _navigateTo('https://bullyapp.com.pe/businesses');
-                        Navigator.of(context).pop();
-                        // Tu lógica aquí
-                      },
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 24),
-              ],
+
+                  const SizedBox(height: 12),
+                  const SizedBox(height: 24),
+
+                  // NFC
+                  _buildMenuItem(
+                    icon: Icons.nfc,
+                    title: 'Bullychip',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+
+                  // Dogs
+                  _buildMenuItem(
+                    icon: Icons.pets,
+                    title: 'Dogs',
+                    onTap: () {
+                      showGlobalAppBar = false;
+                      _navigateTo('https://bullyapp.com.pe/bullys');
+                      Navigator.of(context).pop();
+                    },
+                  ),
+
+                  // Torneos
+                  _buildMenuItem(
+                    icon: Icons.emoji_events,
+                    title: 'Torneos',
+                    onTap: () {
+                      showGlobalAppBar = false;
+                      _navigateTo('https://bullyapp.com.pe/events');
+                      Navigator.of(context).pop();
+                    },
+                  ),
+
+                  // Ruta Bulls
+                  _buildMenuItem(
+                    icon: Icons.route,
+                    title: 'Ruta Bulls',
+                    onTap: () {
+                      showGlobalAppBar = false;
+                      _navigateTo('https://bullyapp.com.pe/blog');
+                      Navigator.of(context).pop();
+                    },
+                  ),
+
+                  // IDRB
+                  _buildMenuItem(
+                    icon: Icons.shield_outlined,
+                    title: 'IDRB',
+                    onTap: () {
+                      showGlobalAppBar = false;
+                      _navigateTo('https://bullyapp.com.pe/idrb');
+                      Navigator.of(context).pop();
+                    },
+                  ),
+
+                  // Tienda
+                  _buildMenuItem(
+                    icon: Icons.store_outlined,
+                    title: 'Tienda',
+                    onTap: () {
+                      showGlobalAppBar = false;
+                      _navigateTo('https://bullyapp.com.pe/marketplace');
+                      Navigator.of(context).pop();
+                    },
+                  ),
+
+                  // Comunidad (con submenú)
+                  _buildExpandableMenuItem(
+                    icon: Icons.people_outline,
+                    title: 'Comunidad',
+                    isExpanded: _isComunidadExpanded,
+                    onToggle: () {
+                      setState(() {
+                        _isComunidadExpanded = !_isComunidadExpanded;
+                      });
+                    },
+                    children: [
+                      _buildSubMenuItem(
+                        icon: Icons.person_outline,
+                        title: 'Propietario',
+                        onTap: () {
+                          _navigateTo('https://bullyapp.com.pe/owners');
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                      _buildSubMenuItem(
+                        icon: Icons.groups,
+                        title: 'Teams',
+                        onTap: () {
+                          _navigateTo('https://bullyapp.com.pe/teams');
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                      _buildSubMenuItem(
+                        icon: Icons.home_outlined,
+                        title: 'Criaderos',
+                        onTap: () {
+                          _navigateTo('https://bullyapp.com.pe/kennels');
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                      _buildSubMenuItem(
+                        icon: Icons.business_outlined,
+                        title: 'Negocios',
+                        onTap: () {
+                          _navigateTo('https://bullyapp.com.pe/businesses');
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
