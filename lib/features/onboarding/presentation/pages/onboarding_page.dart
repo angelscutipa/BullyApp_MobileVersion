@@ -54,7 +54,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       OnboardingItem(
         badgeText: 'LA COMUNIDAD BULLY #1',
         titlePrefix: 'Bienvenido al\necosistema global de\nperros de raza ',
-        highlightedText: 'Bully',
+        highlightedText: '',
         titleSuffix: '',
         features: const [
           OnboardingFeature(icon: Icons.workspace_premium_outlined, title: 'Pedigrí\nVerificado'),
@@ -623,7 +623,7 @@ class _DogWelcomeGraphic extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     const Text(
-                      'BULLYCHIP V2.4',
+                      'BULLYCHIP',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 11,

@@ -68,9 +68,20 @@
 	</array>
 	<key>NFCReaderUsageDescription</key>
 	<string>Necesitamos acceso al NFC para leer las tarjetas y microchips.</string>
-	<key>com.apple.developer.nfc.readersession.iso15693.tag-identifiers</key>
+	<key>com.apple.developer.nfc.readersession.felica.systemcodes</key>
 	<array>
-		<string>0000000000000000</string>
+		<string>12FC</string>
+		<string>0000</string>
+	</array>
+	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+	<array>
+		<string>A0000002471001</string>
+		<string>A0000000031010</string>
+		<string>A0000000032010</string>
+		<string>A0000000041010</string>
+		<string>A0000000042010</string>
+		<string>A0000000043010</string>
+		<string>A0000000044010</string>
 	</array>
 </dict>
 </plist>
