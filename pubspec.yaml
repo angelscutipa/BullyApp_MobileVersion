@@ -107,5 +107,5 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/icon/logo_1024x1024.png"
+  image_path: "assets/dev/logo_1024x1024.png"
   min_sdk_android: 21 # Asegúrate de que coincida con el minSdk de tu app
