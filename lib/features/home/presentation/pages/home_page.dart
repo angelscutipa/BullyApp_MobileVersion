@@ -162,7 +162,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       updatedShowAppBar = true;
     }
 
-    if (UrlHelper.isDashboard(url) || UrlHelper.isAnimalsManagement(url)) {
+    if (UrlHelper.isDashboard(url) || UrlHelper.isAnimalsManagement(url) || url == 'https://bullyapp.com.pe' || url == 'https://bullyapp.com.pe/') {
       isLoggedIn = true;
       _buttonText = "Resumen";
       _fetchAndStoreBearerToken();

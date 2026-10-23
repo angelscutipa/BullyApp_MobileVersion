@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/js_injections.dart';
-import '../../../../core/utils/auth_browser_helper.dart';
 
 class BullyWebView extends StatelessWidget {
   final String initialUrl;
@@ -37,8 +36,8 @@ class BullyWebView extends StatelessWidget {
         cacheMode: CacheMode.LOAD_DEFAULT,
         thirdPartyCookiesEnabled: true,
         sharedCookiesEnabled: true,
-        supportMultipleWindows: true,
-        javaScriptCanOpenWindowsAutomatically: true,
+        supportMultipleWindows: false,
+        javaScriptCanOpenWindowsAutomatically: false,
         allowsBackForwardNavigationGestures: true,
         transparentBackground: false,
         disableDefaultErrorPage: true,
@@ -118,28 +117,8 @@ class BullyWebView extends StatelessWidget {
         if (uri == null) return NavigationActionPolicy.ALLOW;
 
         final String urlStr = uri.toString();
-
-        // 1. Interceptación de Google OAuth (/auth/google)
-        if (uri.path.contains('/auth/google')) {
-          AuthBrowserHelper().openGoogleAuth(
-            url: uri,
-            onAuthCompleted: () async {
-              await controller.reload();
-            },
-          );
-          return NavigationActionPolicy.CANCEL;
-        }
-
-        // 2. Enlaces externos que no pertenezcan al dominio bullyapp.com.pe
-        const String domain = "bullyapp.com.pe";
-        if (uri.host.isNotEmpty && !uri.host.contains(domain) && !urlStr.startsWith('about:')) {
-          if (await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-            return NavigationActionPolicy.CANCEL;
-          }
-        }
-
         final String lowerUrl = urlStr.toLowerCase();
+        final String host = uri.host.toLowerCase();
 
         // Bloqueo de YouTube
         if (lowerUrl.startsWith('https://www.youtube.com/')) {
@@ -155,6 +134,24 @@ class BullyWebView extends StatelessWidget {
             lowerUrl.contains('download');
 
         if (isDownloadableFile) {
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+            return NavigationActionPolicy.CANCEL;
+          }
+        }
+
+        // Permitir rutas de la app y dominios de OAuth (Google, Facebook, Apple)
+        const String domain = "bullyapp.com.pe";
+        final bool isOAuthDomain = host.contains("google.com") ||
+            host.contains("accounts.google") ||
+            host.contains("facebook.com") ||
+            host.contains("facebook.net") ||
+            host.contains("appleid.apple.com");
+
+        final bool isAppDomain = host.isEmpty || host.contains(domain) || lowerUrl.startsWith('about:');
+
+        // Redirigir a navegador externo solo si es un enlace ajeno a la app y NO es OAuth
+        if (!isAppDomain && !isOAuthDomain) {
           if (await canLaunchUrl(uri)) {
             await launchUrl(uri, mode: LaunchMode.externalApplication);
             return NavigationActionPolicy.CANCEL;
