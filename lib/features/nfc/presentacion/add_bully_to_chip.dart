@@ -13,8 +13,8 @@ class AddBullyToChip {
   const AddBullyToChip._();
 
   /// Muestra la pantalla completa de vinculación de chip
-  static Future<void> mostrarDialogo(BuildContext context) {
-    return Navigator.push<void>(
+  static Future<bool?> mostrarDialogo(BuildContext context) {
+    return Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => const AddBullyToChipScreen(),
@@ -22,7 +22,7 @@ class AddBullyToChip {
     );
   }
 
-  static Future<void> mostrarPantalla(BuildContext context) {
+  static Future<bool?> mostrarPantalla(BuildContext context) {
     return mostrarDialogo(context);
   }
 }
@@ -570,20 +570,179 @@ class _AddBullyToChipScreenState extends State<AddBullyToChipScreen> {
     }
   }
 
-  /// Confirmación de vinculación
-  void _vincularChip(String chipID) {
-    // Se envía a la API la orden para asociar el chip a la mascota
-    final nfcRemoteDataSource = LinkChipRemoteDataSource();
-    final _response = nfcRemoteDataSource.linkChipToAnimal(chipId: chipID);
-    print("VALIDAR VINCULACION: " + _response.toString());
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Chip vinculado exitosamente'),
-        backgroundColor: Colors.green,
-      ),
+  /// Confirmación de vinculación con diálogo de éxito y error
+  Future<void> _vincularChip(String chipID) async {
+    // 1. Mostrar diálogo de carga / procesando
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return PopScope(
+          canPop: false,
+          child: Dialog(
+            backgroundColor: const Color(0xFF131517),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Color(0xFF26282B)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  CircularProgressIndicator(color: Color(0xFFFF6900)),
+                  SizedBox(height: 20),
+                  Text(
+                    'Vinculando chip...',
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
 
-    Navigator.pop(context, true);
+    try {
+      final nfcRemoteDataSource = LinkChipRemoteDataSource();
+      final response = await nfcRemoteDataSource.linkChipToAnimal(chipId: chipID);
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Cerrar diálogo de carga
+
+      if (response != null) {
+        // 2. Mostrar diálogo de éxito: "Bienvenido. Ya eres parte de la comunidad Bullyapp"
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (successContext) {
+            return PopScope(
+              canPop: false,
+              child: Dialog(
+                backgroundColor: const Color(0xFF131517),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: Color(0xFF26282B)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.check_circle, color: Colors.green, size: 48),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        '¡Vinculación Exitosa!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Bienvenido. Ya eres parte de la comunidad Bullyapp',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF7A828E),
+                          fontSize: 14,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+
+        await Future.delayed(const Duration(seconds: 2));
+
+        if (!mounted) return;
+        Navigator.of(context).pop(); // Cerrar diálogo de éxito
+        Navigator.pop(context, true); // Regresar a la pantalla anterior
+      } else {
+        _showErrorDialog('No se pudo vincular el chip. Inténtalo de nuevo.');
+      }
+    } catch (error) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Cerrar diálogo de carga si seguía abierto
+      _showErrorDialog('Error: $error');
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (errorContext) {
+        return Dialog(
+          backgroundColor: const Color(0xFF131517),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFF26282B)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Error de Vinculación',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xFF7A828E),
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(errorContext).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF6900),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text('Aceptar'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }

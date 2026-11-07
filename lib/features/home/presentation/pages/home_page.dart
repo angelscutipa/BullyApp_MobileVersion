@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/constants/js_injections.dart';
 import '../../../../core/global_variables.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/storage/auth_local_data_source.dart';
 import '../../../../core/utils/permission_manager.dart';
 import '../../../../core/utils/url_helper.dart';
@@ -35,6 +37,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   String _buttonText = "Iniciar Sesión";
   bool _showFab = false;
+  StreamSubscription<String>? _notificationSubscription;
 
   final AuthLocalDataSource _authStorage = AuthLocalDataSource(
     secureStorage: const FlutterSecureStorage(),
@@ -45,7 +48,26 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     PermissionManager.checkPermissions();
+    _listenToNotificationEvents();
     _determineInitialUrl();
+  }
+
+  void _listenToNotificationEvents() {
+    _notificationSubscription =
+        NotificationService.selectNotificationStream.stream.listen((targetUrl) {
+      if (mounted && targetUrl.isNotEmpty) {
+        debugPrint("🚀 Redirigiendo WebView a URL de notificación: $targetUrl");
+        if (webViewController != null) {
+          webViewController?.loadUrl(
+            urlRequest: URLRequest(url: WebUri(targetUrl)),
+          );
+        } else {
+          setState(() {
+            _targetUrl = targetUrl;
+          });
+        }
+      }
+    });
   }
 
   Future<void> _determineInitialUrl() async {
@@ -71,6 +93,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             isLoggedIn = false;
             _buttonText = "Iniciar Sesión";
           }
+
+          // Si hay una URL pendiente generada por un toque en notificación, usarla
+          if (NotificationService.pendingTargetUrl != null &&
+              NotificationService.pendingTargetUrl!.isNotEmpty) {
+            _targetUrl = NotificationService.pendingTargetUrl!;
+            NotificationService.pendingTargetUrl = null; // Limpiar después de usar
+          }
+
           _isCheckingInitialSession = false;
         });
       }
@@ -79,6 +109,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (mounted) {
         setState(() {
           _targetUrl = 'https://bullyapp.com.pe/login';
+
+          if (NotificationService.pendingTargetUrl != null &&
+              NotificationService.pendingTargetUrl!.isNotEmpty) {
+            _targetUrl = NotificationService.pendingTargetUrl!;
+            NotificationService.pendingTargetUrl = null;
+          }
+
           _isCheckingInitialSession = false;
         });
       }
@@ -88,6 +125,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _notificationSubscription?.cancel();
     super.dispose();
   }
 
@@ -259,7 +297,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               )
             : NoInternetView(onRetry: _retryConnection),
         bottomNavigationBar: MenuFooter(controller: webViewController),
-        floatingActionButton: HomeFab(visible: _showFab),
+        floatingActionButton: HomeFab(
+          visible: _showFab,
+          onChipLinked: () {
+            webViewController?.reload();
+            _checkChipStatusForAnimal();
+          },
+        ),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );

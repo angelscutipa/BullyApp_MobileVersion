@@ -88,6 +88,7 @@ class _MenuFooterState extends State<MenuFooter> {
             builder: (context) => const BullyChipSearchDialog(),
           );
           if (targetUrl != null && targetUrl.isNotEmpty) {
+            showGlobalAppBar = false;
             _navigateTo(targetUrl);
           }
         } else if (label == 'Soporte') {

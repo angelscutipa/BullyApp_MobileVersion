@@ -7,6 +7,7 @@ class PermissionManager {
       Permission.photos, // Para iOS/Android 13+
       Permission.storage, // Para Android 12 e inferiores
       Permission.videos,
+      Permission.notification, // Permiso para notificaciones push (Android 13+)
     ].request();
   }
 }

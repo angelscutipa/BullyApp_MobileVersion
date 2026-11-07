@@ -3,8 +3,9 @@ import '../../../nfc/presentacion/add_bully_to_chip.dart';
 
 class HomeFab extends StatelessWidget {
   final bool visible;
+  final VoidCallback? onChipLinked;
 
-  const HomeFab({super.key, required this.visible});
+  const HomeFab({super.key, required this.visible, this.onChipLinked});
 
   @override
   Widget build(BuildContext context) {
@@ -13,9 +14,12 @@ class HomeFab extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 70),
       child: FloatingActionButton.extended(
-        onPressed: () {
+        onPressed: () async {
           print("🔘 ¡FAB PRESIONADO!");
-          AddBullyToChip.mostrarDialogo(context);
+          final result = await AddBullyToChip.mostrarDialogo(context);
+          if (result == true) {
+            onChipLinked?.call();
+          }
         },
         icon: const Icon(Icons.nfc),
         label: const Text('Vincular Chip'),

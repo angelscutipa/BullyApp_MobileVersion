@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:bully_app/features/nfc/data/models/nfc_response_model.dart';
 import 'package:bully_app/features/animals/data/models/animal_detail_response_model.dart';
+import 'package:bully_app/core/services/notification_service.dart';
 import 'details_utils.dart';
 import 'details_header_image.dart';
 import 'details_cards.dart';
@@ -27,6 +28,20 @@ class DogDetailsView extends StatelessWidget {
         'https://bullyapp.com.pe/storage/generic/files/default_dog.jpeg';
 
     final String dogName = dog.name ?? animal?.name ?? 'Doki';
+
+    // Programar notificación de próxima vacuna de forma idempotente al visualizar el perro
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final int dogId = dog.id ?? animal?.id ?? 9999;
+      final String vaccineDate = dog.nextVaccineDate ??
+          DateTime.now().add(const Duration(days: 7)).toIso8601String().split('T')[0];
+
+      NotificationService.instance.scheduleVaccineReminder(
+        dogId: dogId,
+        dogName: dogName,
+        vaccineDateStr: vaccineDate,
+      );
+    });
+
     final String breedName = dog.breed ?? 'American Bully Classic';
     final String ownerName = dog.owner?.name ??
         (animal?.user?.owner != null
@@ -288,8 +303,8 @@ class DogDetailsView extends StatelessWidget {
                         onTap: () {
                           final int? animalId = dog.id ?? animal?.id;
                           final String targetUrl = animalId != null
-                              ? 'https://bullyapp.com.pe/management/animals/$animalId'
-                              : 'https://bullyapp.com.pe/management/animals';
+                              ? 'https://bullyapp.com.pe/bullys/$animalId'
+                              : 'https://bullyapp.com.pe/bullys';
                           Navigator.of(context).pop(targetUrl);
                         },
                         borderRadius: BorderRadius.circular(14),

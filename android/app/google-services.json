@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1092766947408",
+    "project_id": "bullyappdev",
+    "storage_bucket": "bullyappdev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1092766947408:android:d3177093c5b164441cd955",
+        "android_client_info": {
+          "package_name": "com.pet_developer.bully_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGm9tsEBoDaiCDFaET0XMjDFGvRV8Qi-g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

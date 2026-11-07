@@ -33,6 +33,7 @@ class DogData {
   final String? color;
   final String? gender;
   final String? birthDateFormatted;
+  final String? nextVaccineDate;
   final String? registrationNumber;
   final String? registrySource;
   final String? sex;
@@ -53,6 +54,7 @@ class DogData {
     this.color,
     this.gender,
     this.birthDateFormatted,
+    this.nextVaccineDate,
     this.registrationNumber,
     this.registrySource,
     this.sex,
@@ -72,6 +74,11 @@ class DogData {
     final birthDateMap = json['birth_date'] as Map<String, dynamic>?;
     final formattedDate = birthDateMap?['formatted'] as String?;
 
+    // Próxima vacuna: si el servidor la envía, la usamos; si no, aplicamos fecha preestablecida (ej. 7 días desde hoy)
+    final String? serverVaccineDate = json['next_vaccine_date'] as String? ?? json['next_vaccine'] as String?;
+    final String resolvedVaccineDate = serverVaccineDate ??
+        DateTime.now().add(const Duration(days: 7)).toIso8601String().split('T')[0];
+
     return DogData(
       id: json['id'] as int?,
       name: json['name'] as String?,
@@ -79,6 +86,7 @@ class DogData {
       color: json['color'] as String?,
       gender: json['gender'] as String?,
       birthDateFormatted: formattedDate,
+      nextVaccineDate: resolvedVaccineDate,
       registrationNumber: json['registration_number'] as String?,
       registrySource: json['registry_source'] as String?,
       sex: json['sex'] as String?,
@@ -101,6 +109,8 @@ class DogData {
       'breed': breed,
       'color': color,
       'gender': gender,
+      'birth_date_formatted': birthDateFormatted,
+      'next_vaccine_date': nextVaccineDate,
       'registration_number': registrationNumber,
       'registry_source': registrySource,
       'sex': sex,
