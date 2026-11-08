@@ -45,96 +45,134 @@ class NotificationService {
     importance: Importance.max,
   );
 
-  /// Inicializa el servicio de notificaciones, permisos y manejadores de eventos.
+  /// Imprime un paso numerado en el rastreador de consola para identificar bloqueos.
+  void _logStep(String message, bool success) {
+    if (kDebugMode) {
+      final icon = success ? "✅" : "❌";
+      print("🔔 [RASTREADOR FCM] $icon $message");
+    }
+  }
+
+  /// Inicializa el servicio de notificaciones, permisos y manejadores de eventos con rastreador paso a paso.
   Future<void> initialize() async {
-    // 1. Configurar manejador de mensajes en segundo plano
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    _logStep("PASO 1/9: Iniciando inicialización de NotificationService...", true);
 
-    // 2. Solicitar permisos de notificación
-    await requestPermissions();
+    try {
+      // 1. Configurar manejador de mensajes en segundo plano
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      _logStep("PASO 2/9: Handler de segundo plano (Background) registrado.", true);
 
-    // 3. Inicializar Notificaciones Locales (para foreground)
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/launcher_icon');
-    const iosSettings = DarwinInitializationSettings();
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
+      // 2. Solicitar permisos de notificación
+      _logStep("PASO 3/9: Solicitando permisos de notificación al usuario...", true);
+      await requestPermissions();
 
-    await _localNotifications.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        if (kDebugMode) {
-          print("Notificación local presionada. Payload: ${response.payload}");
-        }
-        if (response.payload != null && response.payload!.isNotEmpty) {
-          try {
-            final Map<String, dynamic> data =
-                Map<String, dynamic>.from(jsonDecode(response.payload!));
-            _processPayloadData(data);
-          } catch (e) {
-            if (kDebugMode) {
-              print("Error al decodificar payload local: $e");
+      // 3. Inicializar Notificaciones Locales (para foreground)
+      _logStep("PASO 4/9: Inicializando plugin de notificaciones locales...", true);
+      const androidSettings =
+          AndroidInitializationSettings('@mipmap/launcher_icon');
+      const iosSettings = DarwinInitializationSettings();
+      const initSettings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+
+      await _localNotifications.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse response) {
+          if (kDebugMode) {
+            print("Notificación local presionada. Payload: ${response.payload}");
+          }
+          if (response.payload != null && response.payload!.isNotEmpty) {
+            try {
+              final Map<String, dynamic> data =
+                  Map<String, dynamic>.from(jsonDecode(response.payload!));
+              _processPayloadData(data);
+            } catch (e) {
+              if (kDebugMode) {
+                print("Error al decodificar payload local: $e");
+              }
             }
           }
+        },
+      );
+
+      // Crear el canal de notificación de alta importancia en Android
+      final androidPlugin = _localNotifications.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin != null) {
+        await androidPlugin.createNotificationChannel(_channel);
+      }
+      _logStep("PASO 5/9: Notificaciones locales y canales del sistema listos.", true);
+
+      // 4. Configurar opciones de presentación en primer plano para iOS
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      _logStep("PASO 6/9: Opciones de presentación en primer plano configuradas.", true);
+
+      // 5. Escuchar notificaciones en primer plano (Foreground)
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        if (kDebugMode) {
+          print("==================================================");
+          print("📩 NOTIFICACIÓN RECIBIDA EN FOREGROUND (APP ABIERTA)");
+          print("DATA (Payload completo): ${message.data}");
+          print("==================================================");
         }
-      },
-    );
+        showNotificationFromRemoteMessage(message);
+      });
 
-    // Crear el canal de notificación de alta importancia en Android
-    final androidPlugin = _localNotifications.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    if (androidPlugin != null) {
-      await androidPlugin.createNotificationChannel(_channel);
+      // 6. Escuchar cuando el usuario toca la notificación con la app en segundo plano
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        if (kDebugMode) {
+          print("==================================================");
+          print("👉 NOTIFICACIÓN TOCADA DESDE BACKGROUND");
+          print("DATA (Payload completo): ${message.data}");
+          print("==================================================");
+        }
+        _handleNotificationClick(message);
+      });
+
+      // 7. Manejar notificación que abrió la app cuando estaba completamente cerrada (Terminated)
+      final initialMessage = await _messaging.getInitialMessage();
+      if (initialMessage != null) {
+        if (kDebugMode) {
+          print("==================================================");
+          print("🚀 APP ABIERTA MEDIANTE NOTIFICACIÓN INICIAL (TERMINATED)");
+          print("DATA (Payload completo): ${initialMessage.data}");
+          print("==================================================");
+        }
+        _handleNotificationClick(initialMessage);
+      }
+      _logStep("PASO 7/9: Escuchadores de eventos (Foreground, Background, Terminated) activos.", true);
+
+      // 8. Verificación explícita del Token nativo de APNs en iOS
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        _logStep("PASO 8/9 [iOS]: Verificando Token nativo de APNs (Apple)...", true);
+        try {
+          final apnsToken = await _messaging.getAPNSToken().timeout(const Duration(seconds: 6));
+          if (apnsToken != null && apnsToken.isNotEmpty) {
+            _logStep("PASO 8/9 [iOS]: ✅ Token APNs obtenido de Apple con éxito: $apnsToken", true);
+          } else {
+            _logStep("PASO 8/9 [iOS]: ⚠️ Token APNs retorno NULO. Apple aún no ha entregado la clave APNs.", false);
+          }
+        } catch (e) {
+          _logStep("PASO 8/9 [iOS]: ❌ Error consultando Token APNs de Apple: $e", false);
+        }
+      }
+
+      // 9. Obtener y escuchar el Token de FCM
+      _logStep("PASO 9/9: Solicitando FCM Token a Firebase...", true);
+      await _initFcmToken();
+
+      // Suscribir automáticamente el dispositivo al tema comunitario "todos"
+      await subscribeToTopic('todos');
+
+      _logStep("🎉 COMPLETO: Flujo de inicialización de NotificationService finalizado.", true);
+    } catch (e) {
+      _logStep("❌ ERROR FATAL en inicialización de NotificationService: $e", false);
     }
-
-    // 4. Configurar opciones de presentación en primer plano para iOS
-    await _messaging.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    // 5. Escuchar notificaciones en primer plano (Foreground)
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      if (kDebugMode) {
-        print("==================================================");
-        print("📩 NOTIFICACIÓN RECIBIDA EN FOREGROUND (APP ABIERTA)");
-        print("DATA (Payload completo): ${message.data}");
-        print("==================================================");
-      }
-      showNotificationFromRemoteMessage(message);
-    });
-
-    // 6. Escuchar cuando el usuario toca la notificación con la app en segundo plano
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      if (kDebugMode) {
-        print("==================================================");
-        print("👉 NOTIFICACIÓN TOCADA DESDE BACKGROUND");
-        print("DATA (Payload completo): ${message.data}");
-        print("==================================================");
-      }
-      _handleNotificationClick(message);
-    });
-
-    // 7. Manejar notificación que abrió la app cuando estaba completamente cerrada (Terminated)
-    final initialMessage = await _messaging.getInitialMessage();
-    if (initialMessage != null) {
-      if (kDebugMode) {
-        print("==================================================");
-        print("🚀 APP ABIERTA MEDIANTE NOTIFICACIÓN INICIAL (TERMINATED)");
-        print("DATA (Payload completo): ${initialMessage.data}");
-        print("==================================================");
-      }
-      _handleNotificationClick(initialMessage);
-    }
-
-    // 8. Obtener y escuchar el Token de FCM
-    await _initFcmToken();
-
-    // 9. Suscribir automáticamente el dispositivo al tema comunitario "todos"
-    await subscribeToTopic('todos');
   }
 
   /// Solicitar permisos de notificación al usuario.
@@ -147,7 +185,7 @@ class NotificationService {
     );
 
     if (kDebugMode) {
-      print("Estado del permiso de notificación: ${settings.authorizationStatus}");
+      _logStep("Estado del permiso otorgado por el usuario: ${settings.authorizationStatus}", true);
     }
   }
 
@@ -156,20 +194,20 @@ class NotificationService {
     try {
       final token = await _messaging.getToken();
       if (kDebugMode) {
-        print("FCM Token obtenido: $token");
+        _logStep("FCM Token obtenido exitosamente: $token", true);
       }
 
       // Escuchar renovaciones de token
       _messaging.onTokenRefresh.listen((newToken) {
         if (kDebugMode) {
-          print("FCM Token actualizado: $newToken");
+          _logStep("FCM Token renovado: $newToken", true);
         }
       });
 
       return token;
     } catch (e) {
       if (kDebugMode) {
-        print("Error obteniendo FCM Token: $e");
+        _logStep("Error obteniendo FCM Token de Firebase: $e", false);
       }
       return null;
     }
@@ -189,11 +227,11 @@ class NotificationService {
     try {
       await _messaging.subscribeToTopic(topic);
       if (kDebugMode) {
-        print("Suscrito exitosamente al tema: $topic");
+        _logStep("Suscrito exitosamente al tema: $topic", true);
       }
     } catch (e) {
       if (kDebugMode) {
-        print("Error al suscribirse al tema $topic: $e");
+        _logStep("Error al suscribirse al tema $topic: $e", false);
       }
     }
   }
@@ -203,11 +241,11 @@ class NotificationService {
     try {
       await _messaging.unsubscribeFromTopic(topic);
       if (kDebugMode) {
-        print("Desuscrito del tema: $topic");
+        _logStep("Desuscrito del tema: $topic", true);
       }
     } catch (e) {
       if (kDebugMode) {
-        print("Error al desuscribirse del tema $topic: $e");
+        _logStep("Error al desuscribirse del tema $topic: $e", false);
       }
     }
   }
