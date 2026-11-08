@@ -47,10 +47,8 @@ class NotificationService {
 
   /// Imprime un paso numerado en el rastreador de consola para identificar bloqueos.
   void _logStep(String message, bool success) {
-    if (kDebugMode) {
-      final icon = success ? "✅" : "❌";
-      print("🔔 [RASTREADOR FCM] $icon $message");
-    }
+    final icon = success ? "✅" : "❌";
+    print("🔔 [RASTREADOR FCM] $icon $message");
   }
 
   /// Inicializa el servicio de notificaciones, permisos y manejadores de eventos con rastreador paso a paso.

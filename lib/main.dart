@@ -19,8 +19,8 @@ void main() async {
 
   runApp(MyApp(isFirstTime: isFirstTime));
 
-  // Inicializar notificaciones de forma no bloqueante tras arrancar la UI
-  Future.microtask(() => NotificationService.instance.initialize());
+  // Inicializar notificaciones inmediatamente tras lanzar la UI
+  NotificationService.instance.initialize();
 }
 
 class MyApp extends StatelessWidget {
