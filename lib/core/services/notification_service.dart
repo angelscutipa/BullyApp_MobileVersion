@@ -133,15 +133,21 @@ class NotificationService {
       });
 
       // 7. Manejar notificación que abrió la app cuando estaba completamente cerrada (Terminated)
-      final initialMessage = await _messaging.getInitialMessage();
-      if (initialMessage != null) {
-        if (kDebugMode) {
+      try {
+        final initialMessage = await _messaging
+            .getInitialMessage()
+            .timeout(const Duration(seconds: 2), onTimeout: () => null);
+        if (initialMessage != null) {
           print("==================================================");
           print("🚀 APP ABIERTA MEDIANTE NOTIFICACIÓN INICIAL (TERMINATED)");
           print("DATA (Payload completo): ${initialMessage.data}");
           print("==================================================");
+          _handleNotificationClick(initialMessage);
         }
-        _handleNotificationClick(initialMessage);
+      } catch (e) {
+        if (kDebugMode) {
+          print("Sin mensaje inicial o timeout en getInitialMessage(): $e");
+        }
       }
       _logStep("PASO 7/9: Escuchadores de eventos (Foreground, Background, Terminated) activos.", true);
 
@@ -190,23 +196,23 @@ class NotificationService {
   /// Obtener el Token FCM actual y suscribirse a cambios de token.
   Future<String?> _initFcmToken() async {
     try {
-      final token = await _messaging.getToken();
-      if (kDebugMode) {
+      final token = await _messaging
+          .getToken()
+          .timeout(const Duration(seconds: 6), onTimeout: () => null);
+      if (token != null) {
         _logStep("FCM Token obtenido exitosamente: $token", true);
+      } else {
+        _logStep("FCM Token retornado nulo o expiró el tiempo de espera.", false);
       }
 
       // Escuchar renovaciones de token
       _messaging.onTokenRefresh.listen((newToken) {
-        if (kDebugMode) {
-          _logStep("FCM Token renovado: $newToken", true);
-        }
+        _logStep("FCM Token renovado: $newToken", true);
       });
 
       return token;
     } catch (e) {
-      if (kDebugMode) {
-        _logStep("Error obteniendo FCM Token de Firebase: $e", false);
-      }
+      _logStep("Error obteniendo FCM Token de Firebase: $e", false);
       return null;
     }
   }
