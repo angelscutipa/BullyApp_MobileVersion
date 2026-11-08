@@ -17,7 +17,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     print("DATA (Payload completo): ${message.data}");
     print("==================================================");
   }
-  await NotificationService.instance.showNotificationFromRemoteMessage(message);
 }
 
 class NotificationService {
@@ -254,7 +253,7 @@ class NotificationService {
     }
   }
 
-  /// Muestra una notificación personalizada con imagen (o fallback al logo) y diseño alineado a la referencia.
+  /// Muestra una notificación personalizada con imagen (o fallback al logo) y diseño seguro.
   Future<void> showNotificationFromRemoteMessage(RemoteMessage message) async {
     final data = message.data;
     
@@ -263,7 +262,7 @@ class NotificationService {
     final String body = data['body'] ?? message.notification?.body ?? '';
     final String? imageUrl = data['imagen_url'] as String?;
 
-    AndroidBitmap<Object>? bigPictureBitmap;
+    ByteArrayAndroidBitmap? downloadedBitmap;
 
     // Intentar descargar la imagen del perro si viene en "imagen_url"
     if (imageUrl != null && imageUrl.trim().isNotEmpty) {
@@ -272,35 +271,53 @@ class NotificationService {
           imageUrl.trim(),
           options: Options(
             responseType: ResponseType.bytes,
-            receiveTimeout: const Duration(seconds: 6),
+            receiveTimeout: const Duration(seconds: 5),
           ),
         );
         if (response.statusCode == 200 && response.data != null) {
-          bigPictureBitmap = ByteArrayAndroidBitmap(Uint8List.fromList(response.data!));
+          downloadedBitmap = ByteArrayAndroidBitmap(Uint8List.fromList(response.data!));
         }
       } catch (e) {
         if (kDebugMode) {
-          print("⚠️ No se pudo descargar la imagen de la notificación ($imageUrl): $e. Usando logo de respaldo.");
+          print("⚠️ No se pudo descargar la imagen de la notificación ($imageUrl): $e. Usando diseño con logo.");
         }
       }
     }
 
-    // Fallback: Si no llegó imagen o falló la descarga, usar el logo de la app por defecto
-    bigPictureBitmap ??= const DrawableResourceAndroidBitmap('@mipmap/launcher_icon');
+    // Configuración segura de estilos en Android según si hay imagen descargada o no
+    AndroidNotificationDetails androidDetails;
 
-    final androidDetails = AndroidNotificationDetails(
-      _channel.id,
-      _channel.name,
-      channelDescription: _channel.description,
-      importance: Importance.max,
-      priority: Priority.high,
-      icon: '@mipmap/launcher_icon',
-      styleInformation: BigPictureStyleInformation(
-        bigPictureBitmap,
-        contentTitle: title,
-        summaryText: body,
-      ),
-    );
+    if (downloadedBitmap != null) {
+      // Estilo con imagen grande cuando se descarga la foto correctamente
+      androidDetails = AndroidNotificationDetails(
+        _channel.id,
+        _channel.name,
+        channelDescription: _channel.description,
+        importance: Importance.max,
+        priority: Priority.high,
+        icon: '@mipmap/launcher_icon',
+        styleInformation: BigPictureStyleInformation(
+          downloadedBitmap,
+          contentTitle: title,
+          summaryText: body,
+        ),
+      );
+    } else {
+      // Estilo de texto expansible ultra-seguro con logo de la app cuando no hay foto
+      androidDetails = AndroidNotificationDetails(
+        _channel.id,
+        _channel.name,
+        channelDescription: _channel.description,
+        importance: Importance.max,
+        priority: Priority.high,
+        icon: '@mipmap/launcher_icon',
+        largeIcon: const DrawableResourceAndroidBitmap('@mipmap/launcher_icon'),
+        styleInformation: BigTextStyleInformation(
+          body,
+          contentTitle: title,
+        ),
+      );
+    }
 
     final notificationDetails = NotificationDetails(
       android: androidDetails,
