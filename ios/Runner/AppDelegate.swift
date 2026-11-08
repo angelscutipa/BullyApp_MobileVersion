@@ -9,6 +9,13 @@ import Firebase
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     FirebaseApp.configure()
+
+    // Registrar explícitamente para notificaciones remotas en APNs (iOS)
+    if #available(iOS 10.0, *) {
+      UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate
+    }
+    application.registerForRemoteNotifications()
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
