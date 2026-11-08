@@ -11,14 +11,16 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(AppTheme.systemOverlayStyle);
 
-  // Inicializar Firebase y Servicio de Notificaciones Push
+  // Inicializar Firebase
   await Firebase.initializeApp();
-  await NotificationService.instance.initialize();
 
   final prefs = await SharedPreferences.getInstance();
   final bool isFirstTime = prefs.getBool('is_first_time') ?? true;
 
   runApp(MyApp(isFirstTime: isFirstTime));
+
+  // Inicializar notificaciones de forma no bloqueante tras arrancar la UI
+  Future.microtask(() => NotificationService.instance.initialize());
 }
 
 class MyApp extends StatelessWidget {
