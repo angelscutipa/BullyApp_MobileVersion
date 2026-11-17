@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
-import 'package:bully_app/features/Principal/Presentacion/dialog_soporte.dart';
 import 'package:bully_app/features/nfc/presentacion/bully_chip_search_dialog.dart';
 import 'package:bully_app/features/nfc/presentacion/fingerprint_pulse.dart';
 import 'package:bully_app/core/global_variables.dart';
@@ -59,12 +58,12 @@ class _MenuFooterState extends State<MenuFooter> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildNavItem(Icons.info_outline, 'IDRB', activeColor, inactiveColor, containerColor, "https://bullyapp.com.pe/idrb", false),
+          _buildNavItem(Icons.person_outline, 'Mi perfil', activeColor, inactiveColor, containerColor, "https://bullyapp.com.pe/login", false),
           _buildNavItem(Icons.pets, 'Dogs', activeColor, inactiveColor, containerColor, "https://bullyapp.com.pe/bullys", false),
           _buildNavItem(Icons.home_outlined, 'Criaderos', activeColor, inactiveColor, containerColor, "https://bullyapp.com.pe/kennels", false),
           _buildNavItem(Icons.fingerprint, 'BullyChip', activeColor, inactiveColor, containerColor, "", true),
           _buildNavItem(Icons.store_outlined, 'Tienda', activeColor, inactiveColor, containerColor, "https://bullyapp.com.pe/marketplace", false),
-          _buildNavItem(Icons.support_outlined, 'Soporte', activeColor, inactiveColor, containerColor, "", false),
+          _buildNavItem(Icons.info_outline, 'IDRB', activeColor, inactiveColor, containerColor, "https://bullyapp.com.pe/idrb", false),
           _buildNavItem(Icons.more_horiz, 'Más', activeColor, inactiveColor, containerColor, "", false),
         ],
       ),
@@ -91,11 +90,6 @@ class _MenuFooterState extends State<MenuFooter> {
             showGlobalAppBar = false;
             _navigateTo(targetUrl);
           }
-        } else if (label == 'Soporte') {
-          showDialog(
-            context: context,
-            builder: (context) => const SoporteDialog(),
-          );
         } else if (label == 'Más') {
           Scaffold.of(context).openEndDrawer();
         } else if (url.isNotEmpty) {

@@ -151,7 +151,6 @@ class _BullyChipSearchDialogState extends State<BullyChipSearchDialog> {
                                   final animalRemoteData = AnimalRemoteDataSource();
                                   final responseID = await animalRemoteData.getAnimalDetails(dogSearch.id!);
                                   final animalID = responseID!.animal!;
-                                  print("DATA ANIMAL ID" + responseID!.animal!.trophies[0].championship!);
                                   if (!mounted) return;
                                   setState(() => _isSearching = false);
                                   final resultUrl = await Navigator.of(context).push<String>(
@@ -355,7 +354,6 @@ class _BullyChipSearchDialogState extends State<BullyChipSearchDialog> {
           final animalRemoteData = AnimalRemoteDataSource();
           final responseID = await animalRemoteData.getAnimalDetails(dogSearch.id!);
           final animalID = responseID!.animal!;
-          print("DATA ANIMAL ID" + responseID!.animal!.trophies[0].championship!);
           
           dialogStateNotifier.value = UnlockState.success;
           dialogMessageNotifier.value = '¡Lectura Exitosa! Bullychip: $savedId identificado';

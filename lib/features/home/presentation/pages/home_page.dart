@@ -300,7 +300,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         floatingActionButton: HomeFab(
           visible: _showFab,
           onChipLinked: () {
-            webViewController?.reload();
+            if (mounted) {
+              setState(() {
+                _showFab = false;
+              });
+            }
             _checkChipStatusForAnimal();
           },
         ),

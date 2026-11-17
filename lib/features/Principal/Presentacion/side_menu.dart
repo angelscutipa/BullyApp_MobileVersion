@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'package:bully_app/core/global_variables.dart';
+import 'package:bully_app/features/Principal/Presentacion/dialog_soporte.dart';
 import 'package:bully_app/features/auth/data/datasources/login_remote_data_source.dart';
 import 'package:bully_app/features/auth/data/models/login_response_model.dart';
 
@@ -231,7 +232,50 @@ class _SideMenuState extends State<SideMenu> {
                     ],
                   ),
 
-                  const SizedBox(height: 24),
+                  // Soporte
+                  _buildMenuItem(
+                    icon: Icons.support_outlined,
+                    title: 'Soporte',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      showDialog(
+                        context: context,
+                        builder: (context) => const SoporteDialog(),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+
+            // Footer con versión, año y créditos
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Divider(color: Color(0xFF2A2A2A), height: 1),
+                  const SizedBox(height: 12),
+                  Text(
+                    'v1.0.4 • © 2026',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'by Bullyapp',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),

@@ -107,6 +107,13 @@ class BullyWebView extends StatelessWidget {
         await controller.evaluateJavascript(source: JSInjections.hideWebFooter);
       },
       onReceivedError: (controller, request, error) {
+        final typeStr = error.type.toString().toUpperCase();
+        final description = error.description.toUpperCase();
+        if (typeStr.contains('CANCEL') ||
+            description.contains('CANCEL') ||
+            description.contains('-999')) {
+          return;
+        }
         if (request.isForMainFrame ?? true) {
           onErrorOccurred(true);
           onLoadingChanged(false);
