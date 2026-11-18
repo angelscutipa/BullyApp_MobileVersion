@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:bully_app/core/global_variables.dart';
 import 'package:bully_app/features/Principal/Presentacion/dialog_soporte.dart';
@@ -22,6 +23,27 @@ class SideMenu extends StatefulWidget {
 
 class _SideMenuState extends State<SideMenu> {
   bool _isComunidadExpanded = false;
+  String _version = '';
+  final int _currentYear = DateTime.now().year;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() {
+          _version = packageInfo.version;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error al obtener la versión del paquete: $e');
+    }
+  }
 
   void _navigateTo(String url) {
     widget.controller?.loadUrl(
@@ -260,7 +282,7 @@ class _SideMenuState extends State<SideMenu> {
                   const Divider(color: Color(0xFF2A2A2A), height: 1),
                   const SizedBox(height: 12),
                   Text(
-                    'v1.0.4 • © 2026',
+                    '${_version.isNotEmpty ? 'v$_version' : ''} • © $_currentYear',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.5),
                       fontSize: 12,
