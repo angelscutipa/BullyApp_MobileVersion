@@ -5,10 +5,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Handler global para mensajes recibidos cuando la app está en segundo plano o cerrada.
 @pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   if (kDebugMode) {
     print("==================================================");
@@ -29,6 +30,9 @@ class NotificationService {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+
+  bool _isInitialized = false;
+  static const String _iosApnsEnvPrefsKey = 'fcm_ios_apns_env_v2';
 
   /// Stream para notificar a la UI de URLs de destino al tocar notificaciones
   static final StreamController<String> selectNotificationStream =
@@ -52,22 +56,29 @@ class NotificationService {
 
   /// Inicializa el servicio de notificaciones, permisos y manejadores de eventos con rastreador paso a paso.
   Future<void> initialize() async {
+    if (_isInitialized) return;
+    _isInitialized = true;
+
     _logStep("PASO 1/9: Iniciando inicialización de NotificationService...", true);
 
     try {
-      // 1. Configurar manejador de mensajes en segundo plano
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-      _logStep("PASO 2/9: Handler de segundo plano (Background) registrado.", true);
+      // 1. Asegurar registro de manejador en segundo plano
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      _logStep("PASO 2/9: Handler de segundo plano (Background) listo.", true);
 
-      // 2. Solicitar permisos de notificación
+      // 2. Solicitar permisos de notificación (único punto en iOS)
       _logStep("PASO 3/9: Solicitando permisos de notificación al usuario...", true);
       await requestPermissions();
 
-      // 3. Inicializar Notificaciones Locales (para foreground)
+      // 3. Inicializar Notificaciones Locales (desactivando solicitud duplicada en iOS)
       _logStep("PASO 4/9: Inicializando plugin de notificaciones locales...", true);
       const androidSettings =
           AndroidInitializationSettings('@mipmap/launcher_icon');
-      const iosSettings = DarwinInitializationSettings();
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      );
       const initSettings = InitializationSettings(
         android: androidSettings,
         iOS: iosSettings,
@@ -111,24 +122,37 @@ class NotificationService {
 
       // 5. Escuchar notificaciones en primer plano (Foreground)
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        _logStep(
+          "📩 Notificación recibida en FOREGROUND (id: ${message.messageId})",
+          true,
+        );
         if (kDebugMode) {
-          print("==================================================");
-          print("📩 NOTIFICACIÓN RECIBIDA EN FOREGROUND (APP ABIERTA)");
           print("DATA (Payload completo): ${message.data}");
-          print("==================================================");
         }
+
+        // En iOS, cuando la notificación trae bloque `notification`, el sistema ya
+        // muestra el banner nativo gracias a setForegroundNotificationPresentationOptions.
+        if (defaultTargetPlatform == TargetPlatform.iOS &&
+            message.notification != null) {
+          return;
+        }
+
         showNotificationFromRemoteMessage(message);
       });
 
-      // 6. Escuchar cuando el usuario toca la notificación con la app en segundo plano
+      // 6. Escuchar cuando el usuario toca la notificación con la app en segundo plano / foreground nativo
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        _logStep("👉 Notificación tocada por el usuario", true);
         if (kDebugMode) {
-          print("==================================================");
-          print("👉 NOTIFICACIÓN TOCADA DESDE BACKGROUND");
           print("DATA (Payload completo): ${message.data}");
-          print("==================================================");
         }
         _handleNotificationClick(message);
+      });
+
+      // Escuchar renovaciones de token (incluye entrega tardía de APNs en iOS)
+      _messaging.onTokenRefresh.listen((newToken) async {
+        _logStep("FCM Token renovado: $newToken", true);
+        await subscribeToTopic('todos');
       });
 
       // 7. Manejar notificación que abrió la app cuando estaba completamente cerrada (Terminated)
@@ -137,10 +161,7 @@ class NotificationService {
             .getInitialMessage()
             .timeout(const Duration(seconds: 2), onTimeout: () => null);
         if (initialMessage != null) {
-          print("==================================================");
-          print("🚀 APP ABIERTA MEDIANTE NOTIFICACIÓN INICIAL (TERMINATED)");
-          print("DATA (Payload completo): ${initialMessage.data}");
-          print("==================================================");
+          _logStep("🚀 App abierta mediante notificación inicial (Terminated)", true);
           _handleNotificationClick(initialMessage);
         }
       } catch (e) {
@@ -150,27 +171,29 @@ class NotificationService {
       }
       _logStep("PASO 7/9: Escuchadores de eventos (Foreground, Background, Terminated) activos.", true);
 
-      // 8. Verificación explícita del Token nativo de APNs en iOS
+      // 8. En iOS, esperar realmente al Token APNs antes de solicitar el FCM Token
       if (defaultTargetPlatform == TargetPlatform.iOS) {
-        _logStep("PASO 8/9 [iOS]: Verificando Token nativo de APNs (Apple)...", true);
-        try {
-          final apnsToken = await _messaging.getAPNSToken().timeout(const Duration(seconds: 6));
-          if (apnsToken != null && apnsToken.isNotEmpty) {
-            _logStep("PASO 8/9 [iOS]: ✅ Token APNs obtenido de Apple con éxito: $apnsToken", true);
-          } else {
-            _logStep("PASO 8/9 [iOS]: ⚠️ Token APNs retorno NULO. Apple aún no ha entregado la clave APNs.", false);
-          }
-        } catch (e) {
-          _logStep("PASO 8/9 [iOS]: ❌ Error consultando Token APNs de Apple: $e", false);
+        _logStep("PASO 8/9 [iOS]: Esperando entrega del Token nativo APNs de Apple...", true);
+        final apnsToken = await _waitForApnsToken();
+        if (apnsToken == null) {
+          _logStep(
+            "PASO 8/9 [iOS]: ⚠️ Apple aún no entregó el Token APNs. Se pospone getToken() hasta onTokenRefresh.",
+            false,
+          );
+          return;
         }
+
+        await _refreshIosTokenIfEnvironmentChanged();
       }
 
-      // 9. Obtener y escuchar el Token de FCM
+      // 9. Obtener el Token de FCM (ya con APNs garantizado en iOS)
       _logStep("PASO 9/9: Solicitando FCM Token a Firebase...", true);
-      await _initFcmToken();
+      final token = await _initFcmToken();
 
       // Suscribir automáticamente el dispositivo al tema comunitario "todos"
-      await subscribeToTopic('todos');
+      if (token != null) {
+        await subscribeToTopic('todos');
+      }
 
       _logStep("🎉 COMPLETO: Flujo de inicialización de NotificationService finalizado.", true);
     } catch (e) {
@@ -178,8 +201,52 @@ class NotificationService {
     }
   }
 
+  /// Espera con reintentos reales a que iOS entregue el APNs token a FirebaseMessaging.
+  Future<String?> _waitForApnsToken({
+    int maxAttempts = 12,
+    Duration interval = const Duration(seconds: 1),
+  }) async {
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final apnsToken = await _messaging.getAPNSToken();
+        if (apnsToken != null && apnsToken.isNotEmpty) {
+          _logStep(
+            "PASO 8/9 [iOS]: Token APNs obtenido en intento $attempt/$maxAttempts: $apnsToken",
+            true,
+          );
+          return apnsToken;
+        }
+      } catch (e) {
+        _logStep("PASO 8/9 [iOS]: Error consultando APNs (intento $attempt): $e", false);
+      }
+      await Future.delayed(interval);
+    }
+    return null;
+  }
+
+  /// Limpia una única vez el token FCM del Keychain cuando la app cambia entre Sandbox (Debug) y Producción (TestFlight/App Store).
+  Future<void> _refreshIosTokenIfEnvironmentChanged() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      const currentEnv = kReleaseMode ? 'prod' : 'sandbox';
+      final savedEnv = prefs.getString(_iosApnsEnvPrefsKey);
+
+      if (savedEnv != currentEnv) {
+        _logStep(
+          "PASO 8.5/9 [iOS]: Limpiando token FCM previo en Keychain para enlazar entorno '$currentEnv'...",
+          true,
+        );
+        await _messaging.deleteToken();
+        await Future.delayed(const Duration(milliseconds: 300));
+        await prefs.setString(_iosApnsEnvPrefsKey, currentEnv);
+      }
+    } catch (e) {
+      _logStep("Aviso limpiando caché previa de FCM Token en iOS: $e", false);
+    }
+  }
+
   /// Solicitar permisos de notificación al usuario.
-  Future<void> requestPermissions() async {
+  Future<NotificationSettings> requestPermissions() async {
     final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
@@ -187,27 +254,25 @@ class NotificationService {
       provisional: false,
     );
 
-    if (kDebugMode) {
-      _logStep("Estado del permiso otorgado por el usuario: ${settings.authorizationStatus}", true);
-    }
+    _logStep(
+      "Estado del permiso de notificaciones: ${settings.authorizationStatus}",
+      settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional,
+    );
+    return settings;
   }
 
-  /// Obtener el Token FCM actual y suscribirse a cambios de token.
+  /// Obtener el Token FCM actual.
   Future<String?> _initFcmToken() async {
     try {
       final token = await _messaging
           .getToken()
-          .timeout(const Duration(seconds: 6), onTimeout: () => null);
+          .timeout(const Duration(seconds: 10), onTimeout: () => null);
       if (token != null) {
         _logStep("FCM Token obtenido exitosamente: $token", true);
       } else {
         _logStep("FCM Token retornado nulo o expiró el tiempo de espera.", false);
       }
-
-      // Escuchar renovaciones de token
-      _messaging.onTokenRefresh.listen((newToken) {
-        _logStep("FCM Token renovado: $newToken", true);
-      });
 
       return token;
     } catch (e) {
@@ -219,6 +284,10 @@ class NotificationService {
   /// Obtener directamente el FCM Token actual.
   Future<String?> getFcmToken() async {
     try {
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        final apnsToken = await _waitForApnsToken(maxAttempts: 5);
+        if (apnsToken == null) return null;
+      }
       return await _messaging.getToken();
     } catch (e) {
       return null;
@@ -229,13 +298,9 @@ class NotificationService {
   Future<void> subscribeToTopic(String topic) async {
     try {
       await _messaging.subscribeToTopic(topic);
-      if (kDebugMode) {
-        _logStep("Suscrito exitosamente al tema: $topic", true);
-      }
+      _logStep("Suscrito exitosamente al tema: $topic", true);
     } catch (e) {
-      if (kDebugMode) {
-        _logStep("Error al suscribirse al tema $topic: $e", false);
-      }
+      _logStep("Error al suscribirse al tema $topic: $e", false);
     }
   }
 

@@ -1,6 +1,8 @@
 import Flutter
 import UIKit
-import Firebase
+import FirebaseCore
+import FirebaseMessaging
+import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -8,37 +10,37 @@ import Firebase
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    FirebaseApp.configure()
-
-    // Registrar explícitamente para notificaciones remotas en APNs (iOS)
-    if #available(iOS 10.0, *) {
-      UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate
+    if FirebaseApp.app() == nil {
+      FirebaseApp.configure()
     }
+
+    UNUserNotificationCenter.current().delegate = self
     application.registerForRemoteNotifications()
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
-  // Muestra el banner flotante y reproduce sonido cuando llega una notificación con la app abierta (Foreground)
-  override func userNotificationCenter(
-    _ center: UNUserNotificationCenter,
-    willPresent notification: UNNotification,
-    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  override func application(
+    _ application: UIApplication,
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
-    if #available(iOS 14.0, *) {
-      completionHandler([.banner, .sound, .badge])
-    } else {
-      completionHandler([.alert, .sound, .badge])
-    }
+    #if DEBUG
+    Messaging.messaging().setAPNSToken(deviceToken, type: .sandbox)
+    NSLog("🔔 [APNs] Device token registrado en Firebase (entorno: SANDBOX)")
+    #else
+    Messaging.messaging().setAPNSToken(deviceToken, type: .prod)
+    NSLog("🔔 [APNs] Device token registrado en Firebase (entorno: PRODUCTION)")
+    #endif
+
+    super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
   }
 
-  // Captura el evento cuando el usuario TOCA / HACE CLICK en la notificación y pasa el evento a Flutter para redireccionar
-  override func userNotificationCenter(
-    _ center: UNUserNotificationCenter,
-    didReceive response: UNNotificationResponse,
-    withCompletionHandler completionHandler: @escaping () -> Void
+  override func application(
+    _ application: UIApplication,
+    didFailToRegisterForRemoteNotificationsWithError error: Error
   ) {
-    super.userNotificationCenter(center, didReceive: response, withCompletionHandler: completionHandler)
+    NSLog("❌ [APNs] Error al registrar notificaciones remotas: %@", error.localizedDescription)
+    super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
